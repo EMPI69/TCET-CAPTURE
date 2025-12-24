@@ -10,6 +10,7 @@ dotenv.config();
 const eventRoutes = require('./routes/events');
 const authRoutes = require('./routes/auth');
 const teamRoutes = require('./routes/teams');
+const facultyRoutes = require('./routes/faculty');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -41,6 +42,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/events', eventRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/teams', teamRoutes);
+app.use('/api/faculty', facultyRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

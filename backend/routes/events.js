@@ -48,6 +48,42 @@ const upload = multer({
   },
 });
 
+// Helper function to serialize Firestore data for JSON response
+const serializeFirestoreData = (data) => {
+  if (data === null || data === undefined) {
+    return data;
+  }
+  
+  // Handle Firestore Timestamp
+  if (data.toDate && typeof data.toDate === 'function') {
+    const date = data.toDate();
+    return {
+      seconds: Math.floor(date.getTime() / 1000),
+      nanoseconds: (date.getTime() % 1000) * 1000000,
+      _timestamp: true, // Flag to indicate this is a timestamp
+    };
+  }
+  
+  // Handle arrays
+  if (Array.isArray(data)) {
+    return data.map(item => serializeFirestoreData(item));
+  }
+  
+  // Handle objects
+  if (typeof data === 'object') {
+    const serialized = {};
+    for (const key in data) {
+      if (data.hasOwnProperty(key)) {
+        serialized[key] = serializeFirestoreData(data[key]);
+      }
+    }
+    return serialized;
+  }
+  
+  // Return primitives as-is
+  return data;
+};
+
 // Helper function to upload image to Cloudinary (FREE tier)
 const uploadToCloudinary = async (fileBuffer, fileName, mimeType) => {
   // Check if Cloudinary is configured
@@ -123,7 +159,8 @@ router.get('/', async (req, res) => {
     
     const events = [];
     eventsSnapshot.forEach((doc) => {
-      events.push({ id: doc.id, ...doc.data() });
+      const eventData = serializeFirestoreData(doc.data());
+      events.push({ id: doc.id, ...eventData });
     });
     res.json(events);
   } catch (error) {
@@ -140,7 +177,8 @@ router.get('/:id', async (req, res) => {
     if (!eventDoc.exists) {
       return res.status(404).json({ error: 'Event not found' });
     }
-    res.json({ id: eventDoc.id, ...eventDoc.data() });
+    const eventData = serializeFirestoreData(eventDoc.data());
+    res.json({ id: eventDoc.id, ...eventData });
   } catch (error) {
     console.error('Error fetching event:', error);
     res.status(500).json({ error: 'Failed to fetch event' });
@@ -232,7 +270,10 @@ router.post('/', verifyAdmin, upload.single('image'), async (req, res) => {
     };
 
     const docRef = await db.collection('events').add(eventData);
-    res.status(201).json({ id: docRef.id, ...eventData });
+    // Fetch the created document to get the actual timestamps
+    const createdDoc = await docRef.get();
+    const createdEventData = serializeFirestoreData(createdDoc.data());
+    res.status(201).json({ id: docRef.id, ...createdEventData });
   } catch (error) {
     console.error('Error creating event:', error);
     res.status(500).json({ error: 'Failed to create event' });
@@ -357,7 +398,8 @@ router.put('/:id', verifyAdmin, upload.single('image'), async (req, res) => {
 
     await eventRef.update(updateData);
     const updatedDoc = await eventRef.get();
-    res.json({ id: updatedDoc.id, ...updatedDoc.data() });
+    const updatedEventData = serializeFirestoreData(updatedDoc.data());
+    res.json({ id: updatedDoc.id, ...updatedEventData });
   } catch (error) {
     console.error('Error updating event:', error);
     res.status(500).json({ error: 'Failed to update event' });

@@ -13,12 +13,15 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [teams, setTeams] = useState([]);
+  const [faculty, setFaculty] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('events'); // 'events' or 'teams'
+  const [activeTab, setActiveTab] = useState('events'); // 'events', 'teams', or 'faculty'
   const [showModal, setShowModal] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
+  const [showFacultyModal, setShowFacultyModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [editingTeam, setEditingTeam] = useState(null);
+  const [editingFaculty, setEditingFaculty] = useState(null);
   const [formData, setFormData] = useState({
     eventName: '',
     organizingClub: '',
@@ -37,6 +40,13 @@ const AdminDashboard = () => {
     teamPhoto: null,
     leads: [{ name: '', role: '', photo: null }],
   });
+  const [facultyFormData, setFacultyFormData] = useState({
+    name: '',
+    role: '',
+    description: '',
+    image: null,
+    imageUrl: '',
+  });
 
   useEffect(() => {
     if (!currentUser) {
@@ -51,6 +61,7 @@ const AdminDashboard = () => {
     }
     fetchEvents();
     fetchTeams();
+    fetchFaculty();
   }, [currentUser, userRole, navigate]);
 
   const fetchEvents = async () => {
@@ -93,6 +104,24 @@ const AdminDashboard = () => {
     } catch (error) {
       console.error('Error fetching teams:', error);
       setTeams([]);
+    }
+  };
+
+  const fetchFaculty = async () => {
+    try {
+      const token = await currentUser.getIdToken();
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/faculty`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      setFaculty(response.data || []);
+    } catch (error) {
+      console.error('Error fetching faculty:', error);
+      setFaculty([]);
     }
   };
 
@@ -418,6 +447,102 @@ const AdminDashboard = () => {
     setTeamFormData({ ...teamFormData, leads: newLeads });
   };
 
+  const handleFacultySubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const token = await currentUser.getIdToken();
+      const formDataToSend = new FormData();
+      
+      formDataToSend.append('name', facultyFormData.name);
+      formDataToSend.append('role', facultyFormData.role);
+      formDataToSend.append('description', facultyFormData.description);
+      
+      if (facultyFormData.image) {
+        formDataToSend.append('image', facultyFormData.image);
+      } else if (facultyFormData.imageUrl && !facultyFormData.image) {
+        formDataToSend.append('imageUrl', facultyFormData.imageUrl);
+      }
+
+      if (editingFaculty) {
+        await axios.put(
+          `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/faculty/${editingFaculty.id}`,
+          formDataToSend,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+      } else {
+        await axios.post(
+          `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/faculty`,
+          formDataToSend,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+      }
+
+      setShowFacultyModal(false);
+      setEditingFaculty(null);
+      setFacultyFormData({
+        name: '',
+        role: '',
+        description: '',
+        image: null,
+        imageUrl: '',
+      });
+      fetchFaculty();
+    } catch (error) {
+      console.error('Error saving faculty:', error);
+      if (error.response) {
+        const errorMessage = error.response.data?.error || 'Failed to save faculty member';
+        const errorDetails = error.response.data?.details || error.response.data?.message || '';
+        alert(`Error: ${errorMessage}${errorDetails ? '\n\n' + errorDetails : ''}`);
+      } else if (error.request) {
+        alert('Error: Backend server is not responding. Please make sure the backend server is running.');
+      } else {
+        alert(`Error: ${error.message || 'An unexpected error occurred.'}`);
+      }
+    }
+  };
+
+  const handleFacultyDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this faculty member?')) {
+      return;
+    }
+
+    try {
+      const token = await currentUser.getIdToken();
+      await axios.delete(
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/faculty/${id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      fetchFaculty();
+    } catch (error) {
+      console.error('Error deleting faculty member:', error);
+      alert('Error deleting faculty member. Please try again.');
+    }
+  };
+
+  const handleFacultyEdit = (facultyMember) => {
+    setEditingFaculty(facultyMember);
+    setFacultyFormData({
+      name: facultyMember.name || '',
+      role: facultyMember.role || '',
+      description: facultyMember.description || '',
+      image: null,
+      imageUrl: facultyMember.imageUrl || '',
+    });
+    setShowFacultyModal(true);
+  };
+
   // Show error if not logged in or not admin
   if (!currentUser) {
     return (
@@ -557,6 +682,16 @@ const AdminDashboard = () => {
             }`}
           >
             Teams
+          </button>
+          <button
+            onClick={() => setActiveTab('faculty')}
+            className={`px-6 py-3 font-semibold transition-all ${
+              activeTab === 'faculty'
+                ? 'text-black border-b-2 border-black -mb-[2px]'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Faculty
           </button>
         </div>
 
@@ -820,6 +955,110 @@ const AdminDashboard = () => {
             )}
           </>
         )}
+
+        {/* Faculty Tab */}
+        {activeTab === 'faculty' && (
+          <>
+            <motion.button
+              onClick={() => {
+                setEditingFaculty(null);
+                setFacultyFormData({
+                  name: '',
+                  role: '',
+                  description: '',
+                  image: null,
+                  imageUrl: '',
+                });
+                setShowFacultyModal(true);
+              }}
+              className="mb-8 flex items-center space-x-2 text-white px-8 py-4 rounded-xl transition-all shadow-2xl font-bold text-lg"
+              style={{ backgroundColor: '#000000' }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#1a1a1a'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#000000'}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <FiPlus size={24} />
+              <span>Add New Faculty Member</span>
+            </motion.button>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {faculty.map((facultyMember, index) => (
+                <motion.div
+                  key={facultyMember.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="rounded-2xl shadow-2xl overflow-hidden hover:shadow-3xl transition-all duration-300 transform hover:-translate-y-2"
+                  style={{ backgroundColor: '#ffffff' }}
+                >
+                  <div className="relative h-48 overflow-hidden">
+                    <img
+                      src={facultyMember.imageUrl || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400'}
+                      alt={facultyMember.name}
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                    <div className="absolute bottom-4 left-4 right-4">
+                      <h3 className="text-xl font-bold text-white drop-shadow-lg mb-1">
+                        {facultyMember.name}
+                      </h3>
+                      <p className="text-sm text-white/90 drop-shadow-md">{facultyMember.role}</p>
+                    </div>
+                  </div>
+                  <div className="p-5" style={{ backgroundColor: '#f5f5f5' }}>
+                    {facultyMember.description && (
+                      <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                        {facultyMember.description}
+                      </p>
+                    )}
+                    <div className="flex space-x-3">
+                      <motion.button
+                        onClick={() => handleFacultyEdit(facultyMember)}
+                        className="flex-1 text-white py-3 px-4 rounded-xl transition-all shadow-lg font-semibold flex items-center justify-center space-x-2"
+                        style={{ backgroundColor: '#2a8f88' }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#237a74'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = '#2a8f88'}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <FiEdit />
+                        <span>Edit</span>
+                      </motion.button>
+                      <motion.button
+                        onClick={() => handleFacultyDelete(facultyMember.id)}
+                        className="flex-1 text-white py-3 px-4 rounded-xl transition-all shadow-lg font-semibold flex items-center justify-center space-x-2"
+                        style={{ backgroundColor: '#d32f2f' }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#b71c1c'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = '#d32f2f'}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <FiTrash2 />
+                        <span>Delete</span>
+                      </motion.button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            {faculty.length === 0 && (
+              <motion.div 
+                className="text-center py-16"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5 }}
+              >
+                <div className="backdrop-blur-md rounded-2xl p-8 shadow-xl" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }}>
+                  <p className="text-white text-xl font-semibold">
+                    No faculty members found. Click "Add New Faculty Member" to create one.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </>
+        )}
       </div>
 
       {showModal && (
@@ -864,6 +1103,26 @@ const AdminDashboard = () => {
           addLead={addLead}
           removeLead={removeLead}
           updateLead={updateLead}
+        />
+      )}
+
+      {showFacultyModal && (
+        <FacultyModal
+          facultyFormData={facultyFormData}
+          setFacultyFormData={setFacultyFormData}
+          onSubmit={handleFacultySubmit}
+          onClose={() => {
+            setShowFacultyModal(false);
+            setEditingFaculty(null);
+            setFacultyFormData({
+              name: '',
+              role: '',
+              description: '',
+              image: null,
+              imageUrl: '',
+            });
+          }}
+          editingFaculty={editingFaculty}
         />
       )}
     </div>
@@ -1241,6 +1500,153 @@ const TeamModal = ({ teamFormData, setTeamFormData, onSubmit, onClose, editingTe
                 className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 font-semibold"
               >
                 {editingTeam ? 'Update Team' : 'Create Team'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+const FacultyModal = ({ facultyFormData, setFacultyFormData, onSubmit, onClose, editingFaculty }) => {
+  const [imagePreview, setImagePreview] = useState(null);
+
+  useEffect(() => {
+    if (facultyFormData.image) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(facultyFormData.image);
+    } else if (facultyFormData.imageUrl) {
+      setImagePreview(facultyFormData.imageUrl);
+    } else {
+      setImagePreview(null);
+    }
+  }, [facultyFormData.image, facultyFormData.imageUrl]);
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFacultyFormData({ ...facultyFormData, image: file, imageUrl: '' });
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+      >
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-3xl font-bold text-gray-800">
+              {editingFaculty ? 'Edit Faculty Member' : 'Add New Faculty Member'}
+            </h2>
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700 text-2xl"
+            >
+              ×
+            </button>
+          </div>
+
+          <form onSubmit={onSubmit}>
+            <div className="space-y-6">
+              {/* Name */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Name *
+                </label>
+                <input
+                  type="text"
+                  value={facultyFormData.name}
+                  onChange={(e) => setFacultyFormData({ ...facultyFormData, name: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              {/* Role */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Role *
+                </label>
+                <input
+                  type="text"
+                  value={facultyFormData.role}
+                  onChange={(e) => setFacultyFormData({ ...facultyFormData, role: e.target.value })}
+                  placeholder="e.g., Faculty In-Charge"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Description
+                </label>
+                <textarea
+                  value={facultyFormData.description}
+                  onChange={(e) => setFacultyFormData({ ...facultyFormData, description: e.target.value })}
+                  rows={4}
+                  placeholder="e.g., Passionate about photography and mentoring students."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Image URL or Upload */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Faculty Photo
+                </label>
+                <div className="space-y-3">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  />
+                  <div className="text-sm text-gray-500 text-center">
+                    OR
+                  </div>
+                  <input
+                    type="url"
+                    value={facultyFormData.imageUrl}
+                    onChange={(e) => setFacultyFormData({ ...facultyFormData, imageUrl: e.target.value, image: null })}
+                    placeholder="Image URL (if not uploading file)"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  />
+                </div>
+                {imagePreview && (
+                  <div className="mt-4">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="w-32 h-32 object-cover rounded-lg border border-gray-300"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex space-x-4 mt-6">
+              <button
+                type="submit"
+                className="flex-1 bg-teal-600 text-white py-3 px-4 rounded-lg hover:bg-teal-700 transition-colors font-semibold"
+              >
+                {editingFaculty ? 'Update Faculty Member' : 'Create Faculty Member'}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 bg-gray-200 text-gray-800 py-3 px-4 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
+              >
+                Cancel
               </button>
             </div>
           </form>

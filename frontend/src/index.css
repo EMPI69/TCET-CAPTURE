@@ -1,3 +1,6 @@
+@import url('https://fonts.googleapis.com/css?family=Roboto+Slab:100,300,400,700');
+@import url('https://fonts.googleapis.com/css?family=Raleway:300,300i,400,400i,500,500i,600,600i,700,700i,800,800i,900,900i');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -475,5 +478,121 @@ nav.bg-white .navbar-expand-item:hover {
 .holographic-card > div {
   position: relative;
   z-index: 2;
+}
+
+/* Faculty Card Simple Design - No Hover Effects */
+.faculty-cards-simple-container {
+  width: 100%;
+  display: flex;
+  display: -webkit-flex;
+  justify-content: center;
+  -webkit-justify-content: center;
+  flex-wrap: wrap;
+  gap: 30px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.faculty-card-simple {
+  margin: 0;
+  background-color: #fff;
+  width: 100%;
+  max-width: 400px;
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0px 13px 10px -7px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  .faculty-card-simple {
+    width: calc(50% - 15px);
+    max-width: 450px;
+  }
+}
+
+.faculty-card-simple__image-container {
+  width: 100%;
+  min-height: 400px;
+  max-height: 500px;
+  overflow: hidden;
+  background-color: #f5f5f5;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.faculty-card-simple__image {
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+  max-height: 500px;
+  display: block;
+  object-fit: cover;
+  object-position: center center;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  /* Optimize image rendering for clarity */
+  image-rendering: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Hardware acceleration for better rendering */
+  -webkit-backface-visibility: hidden;
+  -moz-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-transform: translateZ(0);
+  -moz-transform: translateZ(0);
+  transform: translateZ(0);
+  will-change: transform;
+  /* Enhance image clarity */
+  filter: contrast(1.1) brightness(1.03) saturate(1.05);
+  transition: filter 0.3s ease, transform 0.3s ease;
+  /* Prevent blur on resize */
+  -webkit-perspective: 1000;
+  perspective: 1000;
+}
+
+.faculty-card-simple__image:hover {
+  filter: contrast(1.15) brightness(1.06) saturate(1.1);
+  transform: translateZ(0) scale(1.01);
+}
+
+.faculty-card-simple__info {
+  background-color: #fff;
+  padding: 30px 24px;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+.faculty-card-simple__category {
+  font-family: 'Raleway', sans-serif;
+  text-transform: uppercase;
+  font-size: 13px;
+  letter-spacing: 2px;
+  font-weight: 500;
+  color: #868686;
+  margin-bottom: 10px;
+  display: block;
+}
+
+.faculty-card-simple__title {
+  margin-top: 5px;
+  margin-bottom: 12px;
+  font-family: 'Roboto Slab', serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: #2d2d2d;
+  line-height: 1.3;
+}
+
+.faculty-card-simple__description {
+  font-size: 15px;
+  font-family: 'Raleway', sans-serif;
+  color: #5a5a5a;
+  line-height: 1.7;
+  margin-top: 8px;
 }
 

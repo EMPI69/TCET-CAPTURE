@@ -27,6 +27,42 @@ if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && proce
   console.warn('Cloudinary not configured for teams. Image uploads will fail.');
 }
 
+// Helper function to serialize Firestore data for JSON response
+const serializeFirestoreData = (data) => {
+  if (data === null || data === undefined) {
+    return data;
+  }
+  
+  // Handle Firestore Timestamp
+  if (data.toDate && typeof data.toDate === 'function') {
+    const date = data.toDate();
+    return {
+      seconds: Math.floor(date.getTime() / 1000),
+      nanoseconds: (date.getTime() % 1000) * 1000000,
+      _timestamp: true, // Flag to indicate this is a timestamp
+    };
+  }
+  
+  // Handle arrays
+  if (Array.isArray(data)) {
+    return data.map(item => serializeFirestoreData(item));
+  }
+  
+  // Handle objects
+  if (typeof data === 'object') {
+    const serialized = {};
+    for (const key in data) {
+      if (data.hasOwnProperty(key)) {
+        serialized[key] = serializeFirestoreData(data[key]);
+      }
+    }
+    return serialized;
+  }
+  
+  // Return primitives as-is
+  return data;
+};
+
 // Helper function to upload image to Cloudinary
 const uploadToCloudinary = async (fileBuffer, fileName, mimeType) => {
   if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
@@ -101,7 +137,8 @@ router.get('/', async (req, res) => {
     
     const teams = [];
     teamsSnapshot.forEach((doc) => {
-      teams.push({ id: doc.id, ...doc.data() });
+      const teamData = serializeFirestoreData(doc.data());
+      teams.push({ id: doc.id, ...teamData });
     });
     res.json(teams);
   } catch (error) {
@@ -118,7 +155,8 @@ router.get('/:id', async (req, res) => {
     if (!teamDoc.exists) {
       return res.status(404).json({ error: 'Team not found' });
     }
-    res.json({ id: teamDoc.id, ...teamDoc.data() });
+    const teamData = serializeFirestoreData(teamDoc.data());
+    res.json({ id: teamDoc.id, ...teamData });
   } catch (error) {
     console.error('Error fetching team:', error);
     res.status(500).json({ error: 'Failed to fetch team' });
@@ -228,7 +266,10 @@ router.post('/', verifyAdmin, (req, res, next) => {
     console.log('Creating team with data:', { year, teamPhotoUrl, leadsCount: leadsArray.length });
     const docRef = await db.collection('teams').add(teamData);
     console.log('Team created successfully with ID:', docRef.id);
-    res.status(201).json({ id: docRef.id, ...teamData });
+    // Fetch the created document to get the actual timestamps
+    const createdDoc = await docRef.get();
+    const createdTeamData = serializeFirestoreData(createdDoc.data());
+    res.status(201).json({ id: docRef.id, ...createdTeamData });
   } catch (error) {
     console.error('Error creating team:', error);
     console.error('Error stack:', error.stack);
@@ -334,7 +375,8 @@ router.put('/:id', verifyAdmin, (req, res, next) => {
 
     await teamRef.update(updateData);
     const updatedDoc = await teamRef.get();
-    res.json({ id: updatedDoc.id, ...updatedDoc.data() });
+    const updatedTeamData = serializeFirestoreData(updatedDoc.data());
+    res.json({ id: updatedDoc.id, ...updatedTeamData });
   } catch (error) {
     console.error('Error updating team:', error);
     res.status(500).json({ error: 'Failed to update team' });

@@ -1,26 +1,32 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'framer-motion';
 import { useRef } from 'react';
-
-const faculty = [
-  {
-    name: 'Dr. Sonali Singh',
-    role: 'Faculty In-Charge',
-    image: 'https://www.tcetmumbai.in/image/Staff/hns/photos/Sonalisingh.jpg',
-    description: 'Passionate about photography and mentoring students.',
-  },
-  {
-    name: 'Sachin Sir',
-    role: 'Faculty In-Charge',
-    image: 'https://photos.fife.usercontent.google.com/pw/AP1GczNfqW0wAQHWnt_9qvV2C6DgY_WLvFPMQabo6GNQRVfxol0ofGwIBNh4xg=w622-h933-s-no-gm?authuser=0',
-    description: 'Dedicated to guiding students in their photography journey.',
-  },
-];
+import axios from 'axios';
 
 const FacultySection = () => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
+  const [faculty, setFaculty] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchFaculty();
+  }, []);
+
+  const fetchFaculty = async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/faculty`
+      );
+      setFaculty(response.data || []);
+    } catch (error) {
+      console.error('Error fetching faculty:', error);
+      setFaculty([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <section className="px-4 bg-gradient-to-b from-gray-900 to-gray-800" style={{ paddingTop: '100px', paddingBottom: '100px' }}>
@@ -45,34 +51,46 @@ const FacultySection = () => {
           </motion.div>
 
           {/* Faculty Cards */}
-          <div className="flex-1 grid md:grid-cols-2 gap-8">
-            {faculty.map((member, index) => (
+          {loading ? (
+            <div className="text-center py-16">
+              <div className="text-white text-xl">Loading faculty...</div>
+            </div>
+          ) : faculty.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="text-white text-xl">No faculty members found.</div>
+            </div>
+          ) : (
+            <div className="faculty-cards-simple-container">
+              {faculty.map((member, index) => (
               <motion.div
-                key={index}
+                key={member.id || index}
                 initial={{ opacity: 0, y: 50 }}
                 animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
                 transition={{ duration: 0.6, delay: index * 0.2 }}
-                className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
+                className="faculty-card-simple"
               >
-                <div className="p-6">
-                  <div className="flex items-center space-x-4 mb-4">
-                    <img
-                      src={member.image}
-                      alt={member.name}
-                      className="w-20 h-20 rounded-full object-cover"
-                    />
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-800">
-                        {member.name}
-                      </h3>
-                      <p className="text-red-orange-500">{member.role}</p>
-                    </div>
-                  </div>
-                  <p className="text-gray-600">{member.description}</p>
+                {/* Full Image */}
+                <div className="faculty-card-simple__image-container">
+                  <img 
+                    src={member.imageUrl || member.image || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400'} 
+                    alt={member.name}
+                    className="faculty-card-simple__image"
+                    loading="eager"
+                    decoding="async"
+                    fetchPriority="high"
+                  />
+                </div>
+                
+                {/* Faculty Info */}
+                <div className="faculty-card-simple__info">
+                  <span className="faculty-card-simple__category">{member.role}</span>
+                  <h3 className="faculty-card-simple__title">{member.name}</h3>
+                  <p className="faculty-card-simple__description">{member.description}</p>
                 </div>
               </motion.div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </section>
