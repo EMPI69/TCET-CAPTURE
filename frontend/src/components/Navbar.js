@@ -88,17 +88,17 @@ const Navbar = ({ isScrolled, darkBackground = false }) => {
           </ul>
 
           <button
-            className="md:hidden text-gray-800"
+            className="md:hidden text-white"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
-            {isMobileMenuOpen ? <FiX size={24} /> : <FiMenu size={24} />}
+            {isMobileMenuOpen ? <FiX size={28} /> : <FiMenu size={28} />}
           </button>
         </div>
 
         <AnimatePresence>
           {isMobileMenuOpen && (
             <motion.div
-              className="md:hidden bg-white border-t"
+              className="md:hidden bg-gray-900 bg-opacity-95 backdrop-blur-md border-t border-gray-700"
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
@@ -107,14 +107,14 @@ const Navbar = ({ isScrolled, darkBackground = false }) => {
               <div className="container mx-auto px-4 py-4 space-y-3">
                 <Link
                   to="/"
-                  className="block text-gray-800 hover:text-red-orange-500"
+                  className="block text-white hover:text-red-orange-500"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Home
                 </Link>
                 <Link
                   to="/gallery"
-                  className="block text-gray-800 hover:text-red-orange-500"
+                  className="block text-white hover:text-red-orange-500"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Gallery
@@ -122,7 +122,7 @@ const Navbar = ({ isScrolled, darkBackground = false }) => {
                 {currentUser && userRole === 'admin' && (
                   <Link
                     to="/admin"
-                    className="block text-gray-800 hover:text-red-orange-500"
+                    className="block text-white hover:text-red-orange-500"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Dashboard
@@ -134,7 +134,7 @@ const Navbar = ({ isScrolled, darkBackground = false }) => {
                       handleLogout();
                       setIsMobileMenuOpen(false);
                     }}
-                    className="flex items-center space-x-2 text-gray-800 hover:text-red-orange-500"
+                    className="flex items-center space-x-2 text-white hover:text-red-orange-500"
                   >
                     <FiLogOut />
                     <span>Logout</span>
@@ -145,7 +145,7 @@ const Navbar = ({ isScrolled, darkBackground = false }) => {
                       setIsLoginOpen(true);
                       setIsMobileMenuOpen(false);
                     }}
-                    className="flex items-center space-x-2 text-gray-800 hover:text-red-orange-500"
+                    className="flex items-center space-x-2 text-white hover:text-red-orange-500"
                   >
                     <FiLogIn />
                     <span>Login</span>
